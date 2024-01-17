@@ -1,0 +1,113 @@
+plugins {
+    id 'org.springframework.boot' version '3.1.1'
+    id 'io.spring.dependency-management' version '1.1.0'
+    id 'java'
+}
+
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+}
+
+// 하위 모든 프로젝트 공통 세팅
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'idea'
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+
+    group 'com.multi_modules' // 모듈 생성시 입력해주었던 이름 입력! 입력 안하고 생성했다면 com.example 임
+    version '1.0-SNAPSHOT'
+
+    sourceCompatibility = '17'    // 루트 모듈 생성시 선택했던 java 버전 입력
+    compileJava.options.encoding = 'UTF-8'
+
+    repositories {
+        mavenCentral()
+    }
+
+    // 하위 모듈에서 공통으로 사용하는 세팅 추가.
+    // 루트 모듈 생성시 추가해주었던 종속성 항목들을 가져와 입력하면 된다.
+    dependencies {
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+        implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+        implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
+        compileOnly 'org.projectlombok:lombok'
+        annotationProcessor 'org.projectlombok:lombok'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        // TOOD: 외부 API 호출을 쉽게할 수 있도록 도와준다.
+        implementation "org.springframework.cloud:spring-cloud-starter-openfeign"
+        // https://velog.io/@kjgi73k/Springboot3%EC%97%90-Swagger3%EC%A0%81%EC%9A%A9%ED%95%98%EA%B8%B0
+        implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2'
+        runtimeOnly('com.mysql:mysql-connector-j')
+
+    }
+
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:2021.0.1"
+        }
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}
+//
+//// 공통으로 사용될 파일을 저장 할 common 모듈 설정
+//// bootJar 는  Spring Boot 애플리케이션을 실행 가능한 JAR 파일로 패키징할지 여부를 설정한다.
+////   이 값이 false 이면,
+////   해당 모듈은 Spring Boot 애플리케이션을 실행 가능한 JAR 파일로 패키징하지 않는다.
+//// jar 는 해당 모듈을 일반적인 JAR 파일로 패키징할지 여부를 설정한다.
+project(':common') {
+
+    bootJar { enabled = false } // 공통 모듈은 bootJar 로 패키징 할 필요 없음
+    jar { enabled = true }
+
+    dependencies {
+        implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+    }
+}
+// common 모듈은
+// Spring Boot 애플리케이션으로 실행 가능한 JAR 파일로 패키징하지 않고,
+// 일반적인 JAR 파일로 패키징된다.
+
+//// server 모듈 설정
+project(':user-api') {
+
+    bootJar { enabled = true }
+    jar { enabled = false }
+
+    dependencies {
+        //        implementation project(':mutli-modules')
+        // 컴파일 시 common project 로딩! common 모듈에 의존성이 생긴다.
+        // 이하 server에서만 사용할 종속성 추가
+
+        // settings.gradle에 적힌 이름을 적어주자.
+        dependencies {
+            implementation(project(":common"))
+        }
+
+
+    }
+}
+//// server 모듈은
+//// Spring Boot 애플리케이션으로 실행 가능한 JAR 파일로 패키징 하고,
+//// 일반적인 JAR 파일로 패키징하지 않는다.
+//
+//// client 모듈 설정
+//project(':client') {
+//    bootJar { enabled = true }
+//    jar { enabled = false }
+//
+//    dependencies {
+//        implementation project(':common') // 컴파일 시 common project 로딩
+//        implementation 'org.springframework.boot:spring-boot-starter-security'
+//        implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+//        implementation 'org.springframework.boot:spring-boot-starter-validation'
+//    }
+//}
+// client 모듈은
+// Spring Boot 애플리케이션으로 실행 가능한 JAR 파일로 패키징 하고, 
+// 일반적인 JAR 파일로 패키징하지 않는다.
